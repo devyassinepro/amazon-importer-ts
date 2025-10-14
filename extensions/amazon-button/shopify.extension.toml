@@ -1,0 +1,7 @@
+name = "amazon-button"
+uid = "fd2c0b3a-8f7e-e0d8-90a1-c35898eca7b16826587d"
+type = "theme"
+
+[extension_points]
+[[extension_points.targets]]
+target = "product.extension"

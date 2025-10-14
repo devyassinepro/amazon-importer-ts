@@ -1,0 +1,180 @@
+{% comment %}
+  Amazon Buy Button Block
+  This block displays a "Buy on Amazon" button ONLY for products imported in AFFILIATE mode
+{% endcomment %}
+
+{% comment %} Check if product has Amazon URL AND is in affiliate mode {% endcomment %}
+{% if product.metafields.amazon_importer.amazon_url != blank and product.metafields.amazon_importer.import_mode == 'AFFILIATE' %}
+  <div class="amazon-buy-button-wrapper" style="margin: {{ block.settings.margin_top }}px 0 {{ block.settings.margin_bottom }}px 0;">
+    <a
+      href="{{ product.metafields.amazon_importer.amazon_url }}"
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      class="amazon-buy-button"
+      style="
+        display: inline-block;
+        padding: {{ block.settings.button_padding_vertical }}px {{ block.settings.button_padding_horizontal }}px;
+        background-color: {{ block.settings.button_background_color }};
+        color: {{ block.settings.button_text_color }};
+        text-decoration: none;
+        border-radius: {{ block.settings.button_border_radius }}px;
+        font-size: {{ block.settings.button_font_size }}px;
+        font-weight: {{ block.settings.button_font_weight }};
+        text-align: center;
+        transition: all 0.3s ease;
+        border: {{ block.settings.button_border_width }}px solid {{ block.settings.button_border_color }};
+      "
+      onmouseover="this.style.backgroundColor='{{ block.settings.button_hover_color }}'; this.style.transform='scale(1.05)';"
+      onmouseout="this.style.backgroundColor='{{ block.settings.button_background_color }}'; this.style.transform='scale(1)';"
+    >
+      {{ block.settings.button_text | default: 'Buy on Amazon' }}
+    </a>
+
+    {% if block.settings.show_disclaimer %}
+      <p style="font-size: 12px; color: #666; margin-top: 8px;">
+        {{ block.settings.disclaimer_text | default: 'This is an affiliate link. We may earn a commission.' }}
+      </p>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Amazon Buy Button",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Buy on Amazon"
+    },
+    {
+      "type": "color",
+      "id": "button_background_color",
+      "label": "Button Background Color",
+      "default": "#FF9900"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_color",
+      "label": "Button Hover Color",
+      "default": "#FA8900"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_border_color",
+      "label": "Button Border Color",
+      "default": "#FF9900"
+    },
+    {
+      "type": "range",
+      "id": "button_border_width",
+      "label": "Button Border Width",
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "default": 0,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "button_font_size",
+      "label": "Button Font Size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "default": 16,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "button_font_weight",
+      "label": "Button Font Weight",
+      "options": [
+        {
+          "value": "normal",
+          "label": "Normal"
+        },
+        {
+          "value": "bold",
+          "label": "Bold"
+        },
+        {
+          "value": "600",
+          "label": "Semi-bold"
+        }
+      ],
+      "default": "bold"
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "label": "Button Border Radius",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "default": 4,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "button_padding_vertical",
+      "label": "Button Padding (Vertical)",
+      "min": 5,
+      "max": 30,
+      "step": 1,
+      "default": 12,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "button_padding_horizontal",
+      "label": "Button Padding (Horizontal)",
+      "min": 10,
+      "max": 60,
+      "step": 1,
+      "default": 24,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "margin_top",
+      "label": "Margin Top",
+      "min": 0,
+      "max": 50,
+      "step": 5,
+      "default": 15,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "margin_bottom",
+      "label": "Margin Bottom",
+      "min": 0,
+      "max": 50,
+      "step": 5,
+      "default": 15,
+      "unit": "px"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_disclaimer",
+      "label": "Show Disclaimer",
+      "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "disclaimer_text",
+      "label": "Disclaimer Text",
+      "default": "This is an affiliate link. We may earn a commission."
+    }
+  ]
+}
+{% endschema %}

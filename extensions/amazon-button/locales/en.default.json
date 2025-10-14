@@ -1,0 +1,8 @@
+{
+  "name": "Amazon Button Extension",
+  "blocks": {
+    "amazon_button": {
+      "name": "Amazon Buy Button"
+    }
+  }
+}
