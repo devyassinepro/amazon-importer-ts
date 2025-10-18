@@ -9,8 +9,8 @@ generator client {
 // enough when changing adapters.
 // See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
-  provider = "sqlite"
-  url      = "file:dev.sqlite"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model Session {
@@ -42,6 +42,8 @@ model AppSettings {
   pricingMode              String   @default("MULTIPLIER") // MULTIPLIER or FIXED
   pricingValue             Float    @default(1.0)
   defaultImportMode        String   @default("DROPSHIPPING") // AFFILIATE or DROPSHIPPING
+  defaultCollectionId      String?  // Default collection to add products to
+  autoPublish              Boolean  @default(false) // Auto-publish imported products
   termsAccepted            Boolean  @default(false)
   termsAcceptedAt          DateTime?
   createdAt                DateTime @default(now())

@@ -7,7 +7,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { prisma } from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
 
   let settings = await prisma.appSettings.findUnique({
     where: { shop: session.shop },
@@ -19,7 +19,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   }
 
-  return { settings };
+  // Fetch collections for default collection selection
+  const collectionsResponse = await admin.graphql(
+    `#graphql
+    query getCollections {
+      collections(first: 250) {
+        edges {
+          node {
+            id
+            title
+          }
+        }
+      }
+    }`,
+  );
+
+  const collectionsData = await collectionsResponse.json();
+  const collections = collectionsData.data.collections.edges.map((edge: any) => ({
+    id: edge.node.id,
+    title: edge.node.title,
+  }));
+
+  return { settings, collections };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -35,6 +56,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     pricingMode: (formData.get("pricingMode") as string) || "MULTIPLIER",
     pricingValue: parseFloat((formData.get("pricingValue") as string) || "1.0"),
     defaultImportMode: (formData.get("defaultImportMode") as string) || "DROPSHIPPING",
+    defaultCollectionId: (formData.get("defaultCollectionId") as string) || null,
+    autoPublish: formData.get("autoPublish") === "true",
     termsAccepted: formData.get("termsAccepted") === "true",
     termsAcceptedAt: formData.get("termsAccepted") === "true" ? new Date() : null,
   };
@@ -49,7 +72,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Settings() {
-  const { settings } = useLoaderData<typeof loader>();
+  const { settings, collections } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
 
@@ -61,6 +84,8 @@ export default function Settings() {
   const [pricingMode, setPricingMode] = useState(settings.pricingMode);
   const [pricingValue, setPricingValue] = useState(settings.pricingValue);
   const [defaultImportMode, setDefaultImportMode] = useState(settings.defaultImportMode);
+  const [defaultCollectionId, setDefaultCollectionId] = useState(settings.defaultCollectionId || "");
+  const [autoPublish, setAutoPublish] = useState(settings.autoPublish || false);
   const [termsAccepted, setTermsAccepted] = useState(settings.termsAccepted);
 
   const isLoading = fetcher.state === "submitting";
@@ -82,6 +107,8 @@ export default function Settings() {
     formData.append("pricingMode", pricingMode);
     formData.append("pricingValue", pricingValue.toString());
     formData.append("defaultImportMode", defaultImportMode);
+    formData.append("defaultCollectionId", defaultCollectionId);
+    formData.append("autoPublish", autoPublish.toString());
     formData.append("termsAccepted", termsAccepted.toString());
     fetcher.submit(formData, { method: "POST" });
   };
@@ -314,6 +341,68 @@ export default function Settings() {
                       <option value="AFFILIATE">🟢 Affiliate (original price, earn commissions)</option>
                     </s-select>
                   </s-stack>
+                </s-stack>
+              </s-box>
+            </s-section>
+
+            {/* 3. Product Organization Settings */}
+            <s-section>
+              <s-box padding="base" borderWidth="base" borderRadius="base" style={{ backgroundColor: "#f9fafb" }}>
+                <s-stack direction="block" gap="base">
+                  <s-text variant="headingMd" weight="semibold">
+                    📂 Product Organization
+                  </s-text>
+
+                  <s-banner tone="info">
+                    <s-paragraph>
+                      Configure default settings for organizing imported products in your store.
+                    </s-paragraph>
+                  </s-banner>
+
+                  <s-select
+                    label="Default Collection"
+                    value={defaultCollectionId}
+                    onChange={(e: any) => setDefaultCollectionId(e.target.value)}
+                    helptext="New products will be automatically added to this collection"
+                  >
+                    <option value="">-- No Default Collection --</option>
+                    {collections.map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                  </s-select>
+
+                  <s-divider />
+
+                  <s-checkbox
+                    checked={autoPublish}
+                    onChange={(e: any) => setAutoPublish(e.target.checked)}
+                  >
+                    <s-text weight="semibold">Auto-publish imported products</s-text>
+                  </s-checkbox>
+
+                  <s-banner tone={autoPublish ? "warning" : "info"}>
+                    <s-stack direction="block" gap="tight">
+                      {autoPublish ? (
+                        <>
+                          <s-text weight="semibold">⚠️ Auto-publish is enabled</s-text>
+                          <s-paragraph size="small">
+                            Products will be immediately visible to customers after import.
+                            Make sure you review product details carefully before importing.
+                          </s-paragraph>
+                        </>
+                      ) : (
+                        <>
+                          <s-text weight="semibold">ℹ️ Products will be saved as drafts</s-text>
+                          <s-paragraph size="small">
+                            Imported products will be saved as drafts, giving you time to review
+                            before making them visible to customers.
+                          </s-paragraph>
+                        </>
+                      )}
+                    </s-stack>
+                  </s-banner>
                 </s-stack>
               </s-box>
             </s-section>

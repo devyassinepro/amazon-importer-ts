@@ -7,7 +7,17 @@
       "Bash(curl:*)",
       "Bash(python3:*)",
       "Bash(cat:*)",
-      "Read(//Users/touzani/Desktop/amazon-importer/amazon-importer-js/**)"
+      "Read(//Users/touzani/Desktop/amazon-importer/amazon-importer-js/**)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma:*)",
+      "Bash(pkill:*)",
+      "Bash(npm install:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run setup:*)",
+      "Bash(node check-db.cjs:*)",
+      "Bash(npx tsc:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

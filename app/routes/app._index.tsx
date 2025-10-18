@@ -43,7 +43,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     title: edge.node.title,
   }));
 
-  return { settings, collections };
+  // Get last 5 imported products
+  const recentProducts = await prisma.importedProduct.findMany({
+    where: { shop: session.shop },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  return { settings, collections, recentProducts };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -178,11 +185,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Index() {
-  const { settings, collections } = useLoaderData<typeof loader>();
+  const { settings, collections, recentProducts } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
 
   const [showTermsModal, setShowTermsModal] = useState(!settings.termsAccepted);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [amazonUrl, setAmazonUrl] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [productData, setProductData] = useState<any>(null);
@@ -193,8 +201,12 @@ export default function Index() {
     settings.pricingMode as PricingMode,
   );
   const [markupValue, setMarkupValue] = useState(settings.pricingValue);
-  const [productStatus, setProductStatus] = useState<"DRAFT" | "ACTIVE">("DRAFT");
-  const [selectedCollection, setSelectedCollection] = useState("");
+  const [productStatus, setProductStatus] = useState<"DRAFT" | "ACTIVE">(
+    settings.autoPublish ? "ACTIVE" : "DRAFT"
+  );
+  const [selectedCollection, setSelectedCollection] = useState(
+    settings.defaultCollectionId || ""
+  );
 
   const isLoading = fetcher.state === "submitting" || fetcher.state === "loading";
   const isFetching = isLoading && fetcher.formData?.get("action") === "scrape";
@@ -206,6 +218,7 @@ export default function Index() {
     } else if (fetcher.data?.action === "scraped" && fetcher.data.productData) {
       setProductData(fetcher.data.productData);
       setShowPreview(true);
+      setShowImportModal(false);
       shopify.toast.show("Product fetched successfully!");
     } else if (fetcher.data?.action === "imported") {
       shopify.toast.show("Product imported successfully! 🎉");
@@ -259,47 +272,107 @@ export default function Index() {
 
   return (
     <>
-      {/* Terms Modal */}
+      {/* Terms Modal - Enhanced Design */}
       {showTermsModal && (
         <s-modal
-          open={showTermsModal}
+          open
           title="Terms of Importation"
           onClose={() => setShowTermsModal(false)}
         >
-          <s-stack direction="block" gap="base" style={{ padding: "20px" }}>
-            <s-paragraph>
-              By using Amazon Importer, you agree to the following terms and conditions:
-            </s-paragraph>
+          <s-stack direction="block" gap="base" style={{ padding: "24px", maxWidth: "600px" }}>
+            {/* Header Banner */}
+            <s-banner tone="warning">
+              <s-text weight="semibold">
+                Please read and accept these terms before using Amazon Importer
+              </s-text>
+            </s-banner>
 
-            <s-unordered-list>
-              <s-list-item>
-                You confirm that you have the necessary rights to import and sell products using this app.
-              </s-list-item>
-              <s-list-item>
-                Importing copyrighted or trademarked products without authorization is strictly prohibited.
-              </s-list-item>
-              <s-list-item>
-                You are solely responsible for ensuring compliance with Shopify's Acceptable Use Policy and all applicable laws.
-              </s-list-item>
-              <s-list-item>
-                Amazon's Terms of Service must be respected. This includes proper use of product data and images.
-              </s-list-item>
-              <s-list-item>
-                When using Affiliate Mode, you must comply with Amazon's Associates Program Operating Agreement.
-              </s-list-item>
-              <s-list-item>
-                Any misuse of this app may result in account suspension or legal action.
-              </s-list-item>
-              <s-list-item>
-                Price accuracy is your responsibility. Always verify prices before publishing products.
-              </s-list-item>
-            </s-unordered-list>
+            {/* Introduction */}
+            <s-stack direction="block" gap="small">
+              <s-text weight="semibold" size="large">Agreement Overview</s-text>
+              <s-paragraph tone="subdued">
+                By using Amazon Importer, you agree to comply with all applicable laws,
+                regulations, and third-party terms of service. This includes but is not
+                limited to Shopify's policies and Amazon's Terms of Service.
+              </s-paragraph>
+            </s-stack>
 
-            <s-paragraph weight="semibold">
-              By clicking "I Accept", you acknowledge that you have read and understood these terms.
-            </s-paragraph>
+            <s-divider />
 
-            <s-stack direction="inline" gap="base" style={{ justifyContent: "flex-end", marginTop: "20px" }}>
+            {/* Terms List with Icons */}
+            <s-stack direction="block" gap="base">
+              <s-text weight="semibold" size="large">Your Responsibilities</s-text>
+
+              <s-stack direction="block" gap="small">
+                <s-stack direction="inline" gap="small" align="start">
+                  <s-text>✅</s-text>
+                  <s-text>
+                    You confirm that you have the necessary rights to import and sell products using this app.
+                  </s-text>
+                </s-stack>
+
+                <s-stack direction="inline" gap="small" align="start">
+                  <s-text>⚖️</s-text>
+                  <s-text>
+                    Importing copyrighted or trademarked products without authorization is strictly prohibited.
+                  </s-text>
+                </s-stack>
+
+                <s-stack direction="inline" gap="small" align="start">
+                  <s-text>📋</s-text>
+                  <s-text>
+                    You are solely responsible for ensuring compliance with Shopify's Acceptable Use Policy and all applicable laws.
+                  </s-text>
+                </s-stack>
+
+                <s-stack direction="inline" gap="small" align="start">
+                  <s-text>🛒</s-text>
+                  <s-text>
+                    Amazon's Terms of Service must be respected. This includes proper use of product data and images.
+                  </s-text>
+                </s-stack>
+
+                <s-stack direction="inline" gap="small" align="start">
+                  <s-text>🔗</s-text>
+                  <s-text>
+                    When using Affiliate Mode, you must comply with Amazon's Associates Program Operating Agreement.
+                  </s-text>
+                </s-stack>
+
+                <s-stack direction="inline" gap="small" align="start">
+                  <s-text>💰</s-text>
+                  <s-text>
+                    Price accuracy is your responsibility. Always verify prices before publishing products.
+                  </s-text>
+                </s-stack>
+
+                <s-stack direction="inline" gap="small" align="start">
+                  <s-text>⚠️</s-text>
+                  <s-text>
+                    Any misuse of this app may result in account suspension or legal action.
+                  </s-text>
+                </s-stack>
+              </s-stack>
+            </s-stack>
+
+            <s-divider />
+
+            {/* Acceptance Section */}
+            <s-banner tone="info">
+              <s-stack direction="block" gap="small">
+                <s-text weight="semibold">
+                  By clicking "I Accept", you acknowledge that:
+                </s-text>
+                <s-unordered-list>
+                  <s-list-item>You have read and understood these terms</s-list-item>
+                  <s-list-item>You agree to comply with all mentioned policies</s-list-item>
+                  <s-list-item>You accept full responsibility for your use of this app</s-list-item>
+                </s-unordered-list>
+              </s-stack>
+            </s-banner>
+
+            {/* Action Buttons */}
+            <s-stack direction="inline" gap="base" style={{ justifyContent: "flex-end", marginTop: "16px" }}>
               <s-button onClick={() => setShowTermsModal(false)}>
                 Cancel
               </s-button>
@@ -311,11 +384,300 @@ export default function Index() {
                   fetcher.submit(formData, { method: "POST" });
                 }}
               >
-                I Accept
+                I Accept Terms & Conditions
               </s-button>
             </s-stack>
           </s-stack>
         </s-modal>
+      )}
+
+      {/* Import Product Modal */}
+      {showImportModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+          onClick={() => setShowImportModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              maxWidth: "600px",
+              width: "90%",
+              maxHeight: "90vh",
+              overflow: "auto",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #e1e3e5",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "20px",
+                  fontWeight: "600",
+                  color: "#202223",
+                }}
+              >
+                Import Product Configuration
+              </h2>
+              <button
+                onClick={() => setShowImportModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  color: "#6d7175",
+                  padding: "0",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "4px",
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#f6f6f7")}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: "24px" }}>
+              <s-stack direction="block" gap="base">
+            <s-banner tone="info">
+              <s-text weight="semibold">
+                Configure your import settings for this product
+              </s-text>
+            </s-banner>
+
+            {/* Amazon URL Display */}
+            <s-stack direction="block" gap="small">
+              <s-text weight="semibold">Amazon Product URL:</s-text>
+              <s-text tone="subdued" size="small" style={{ wordBreak: "break-all" }}>
+                {amazonUrl}
+              </s-text>
+            </s-stack>
+
+            <s-divider />
+
+            {/* Import Mode Selection */}
+            <s-stack direction="block" gap="base">
+              <s-text weight="semibold" size="large">Import Mode</s-text>
+
+              <s-box
+                padding="base"
+                borderWidth="base"
+                borderRadius="base"
+                style={{
+                  borderColor: importMode === "AFFILIATE" ? "#008060" : "#e1e3e5",
+                  backgroundColor: importMode === "AFFILIATE" ? "#f6f6f7" : "transparent",
+                  cursor: "pointer",
+                }}
+                onClick={() => setImportMode("AFFILIATE")}
+              >
+                <s-stack direction="inline" gap="small">
+                  <input
+                    type="radio"
+                    name="import-mode-modal"
+                    value="AFFILIATE"
+                    checked={importMode === "AFFILIATE"}
+                    onChange={() => setImportMode("AFFILIATE")}
+                    style={{ marginTop: "4px" }}
+                  />
+                  <s-stack direction="block" gap="tight">
+                    <s-text weight="semibold">🟢 Affiliate Mode</s-text>
+                    <s-text tone="subdued" size="small">
+                      Keep original Amazon price and earn commissions
+                    </s-text>
+                  </s-stack>
+                </s-stack>
+              </s-box>
+
+              <s-box
+                padding="base"
+                borderWidth="base"
+                borderRadius="base"
+                style={{
+                  borderColor: importMode === "DROPSHIPPING" ? "#008060" : "#e1e3e5",
+                  backgroundColor: importMode === "DROPSHIPPING" ? "#f6f6f7" : "transparent",
+                  cursor: "pointer",
+                }}
+                onClick={() => setImportMode("DROPSHIPPING")}
+              >
+                <s-stack direction="inline" gap="small">
+                  <input
+                    type="radio"
+                    name="import-mode-modal"
+                    value="DROPSHIPPING"
+                    checked={importMode === "DROPSHIPPING"}
+                    onChange={() => setImportMode("DROPSHIPPING")}
+                    style={{ marginTop: "4px" }}
+                  />
+                  <s-stack direction="block" gap="tight">
+                    <s-text weight="semibold">🛒 Dropshipping Mode</s-text>
+                    <s-text tone="subdued" size="small">
+                      Sell at your own price with markup
+                    </s-text>
+                  </s-stack>
+                </s-stack>
+              </s-box>
+
+              {importMode === "DROPSHIPPING" && (
+                <s-stack direction="block" gap="base" style={{ marginTop: "12px" }}>
+                  <s-text weight="semibold">Pricing Configuration:</s-text>
+
+                  <s-stack direction="inline" gap="base">
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <input
+                        type="radio"
+                        name="markup-type-modal"
+                        value="FIXED"
+                        checked={markupType === "FIXED"}
+                        onChange={() => setMarkupType("FIXED")}
+                      />
+                      <s-text>Fixed Amount ($)</s-text>
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <input
+                        type="radio"
+                        name="markup-type-modal"
+                        value="MULTIPLIER"
+                        checked={markupType === "MULTIPLIER"}
+                        onChange={() => setMarkupType("MULTIPLIER")}
+                      />
+                      <s-text>Multiplier (x)</s-text>
+                    </label>
+                  </s-stack>
+
+                  <s-text-field
+                    type="number"
+                    value={markupValue.toString()}
+                    onChange={(e: any) => setMarkupValue(parseFloat(e.target.value) || 0)}
+                    label={markupType === "FIXED" ? "Markup Amount ($)" : "Price Multiplier"}
+                    min="0"
+                    step={markupType === "FIXED" ? "0.01" : "0.1"}
+                  ></s-text-field>
+                </s-stack>
+              )}
+            </s-stack>
+
+            <s-divider />
+
+            {/* Product Status */}
+            <s-stack direction="block" gap="base">
+              <s-text weight="semibold" size="large">Product Status</s-text>
+
+              <s-stack direction="block" gap="small">
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px", border: "1px solid #e1e3e5", borderRadius: "8px", cursor: "pointer", backgroundColor: productStatus === "DRAFT" ? "#f6f6f7" : "transparent" }}>
+                  <input
+                    type="radio"
+                    name="product-status-modal"
+                    value="DRAFT"
+                    checked={productStatus === "DRAFT"}
+                    onChange={() => setProductStatus("DRAFT")}
+                  />
+                  <s-stack direction="block" gap="tight">
+                    <s-text weight="semibold">💾 Draft</s-text>
+                    <s-text tone="subdued" size="small">Not visible to customers</s-text>
+                  </s-stack>
+                </label>
+
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px", border: "1px solid #e1e3e5", borderRadius: "8px", cursor: "pointer", backgroundColor: productStatus === "ACTIVE" ? "#f6f6f7" : "transparent" }}>
+                  <input
+                    type="radio"
+                    name="product-status-modal"
+                    value="ACTIVE"
+                    checked={productStatus === "ACTIVE"}
+                    onChange={() => setProductStatus("ACTIVE")}
+                  />
+                  <s-stack direction="block" gap="tight">
+                    <s-text weight="semibold">✅ Active</s-text>
+                    <s-text tone="subdued" size="small">Publish immediately</s-text>
+                  </s-stack>
+                </label>
+              </s-stack>
+            </s-stack>
+
+            <s-divider />
+
+            {/* Collection Selection */}
+            <s-stack direction="block" gap="base">
+              <s-text weight="semibold" size="large">Add to Collection (optional)</s-text>
+
+              <s-stack direction="block" gap="small">
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px", border: "1px solid #e1e3e5", borderRadius: "8px", cursor: "pointer", backgroundColor: selectedCollection === "" ? "#f6f6f7" : "transparent" }}>
+                  <input
+                    type="radio"
+                    name="collection-modal"
+                    value=""
+                    checked={selectedCollection === ""}
+                    onChange={() => setSelectedCollection("")}
+                  />
+                  <s-text weight="semibold">No Collection</s-text>
+                </label>
+
+                {collections.map((c: any) => (
+                  <label key={c.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px", border: "1px solid #e1e3e5", borderRadius: "8px", cursor: "pointer", backgroundColor: selectedCollection === c.id ? "#f6f6f7" : "transparent" }}>
+                    <input
+                      type="radio"
+                      name="collection-modal"
+                      value={c.id}
+                      checked={selectedCollection === c.id}
+                      onChange={() => setSelectedCollection(c.id)}
+                    />
+                    <s-text>{c.title}</s-text>
+                  </label>
+                ))}
+              </s-stack>
+            </s-stack>
+          </s-stack>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #e1e3e5",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+              }}
+            >
+              <s-button onClick={() => setShowImportModal(false)}>
+                Cancel
+              </s-button>
+              <s-button
+                variant="primary"
+                onClick={handleScrape}
+                {...(isFetching ? { loading: true } : {})}
+              >
+                {isFetching ? "Fetching..." : "Continue to Import"}
+              </s-button>
+            </div>
+          </div>
+        </div>
       )}
 
       <s-page heading="Import Amazon Products">
@@ -325,6 +687,106 @@ export default function Index() {
         <s-button slot="secondary-action" href="/app/settings">
           ⚙️ Settings
         </s-button>
+
+        {/* Recent Products Section */}
+        {recentProducts && recentProducts.length > 0 && (
+          <s-section heading="📦 Recently Imported Products">
+            <s-stack direction="block" gap="base">
+              <s-paragraph tone="subdued">
+                Your last {recentProducts.length} imported products
+              </s-paragraph>
+
+              <s-stack direction="block" gap="small">
+                {recentProducts.map((product: any) => (
+                  <s-box
+                    key={product.id}
+                    padding="base"
+                    borderWidth="base"
+                    borderRadius="base"
+                    style={{
+                      backgroundColor: "#fafbfb",
+                      borderColor: "#e1e3e5",
+                    }}
+                  >
+                    <s-stack direction="inline" gap="base" align="start">
+                      {/* Product Image */}
+                      {product.productImage && (
+                        <img
+                          src={product.productImage}
+                          alt={product.title}
+                          style={{
+                            width: "80px",
+                            height: "80px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            border: "1px solid #e1e3e5",
+                          }}
+                        />
+                      )}
+
+                      {/* Product Info */}
+                      <s-stack direction="block" gap="small" style={{ flex: 1 }}>
+                        <s-text weight="semibold" size="medium">
+                          {product.title.length > 60
+                            ? product.title.substring(0, 60) + "..."
+                            : product.title}
+                        </s-text>
+
+                        <s-stack direction="inline" gap="small">
+                          <s-badge tone={product.status === "ACTIVE" ? "success" : "info"}>
+                            {product.status === "ACTIVE" ? "✅ Published" : "💾 Draft"}
+                          </s-badge>
+                          <s-badge tone={product.importMode === "AFFILIATE" ? "warning" : "info"}>
+                            {product.importMode === "AFFILIATE" ? "🔗 Affiliate" : "🛒 Dropshipping"}
+                          </s-badge>
+                          {product.variantCount > 1 && (
+                            <s-badge>{product.variantCount} variants</s-badge>
+                          )}
+                        </s-stack>
+
+                        <s-stack direction="inline" gap="base" align="center">
+                          <s-text tone="subdued" size="small">
+                            ${product.price.toFixed(2)}
+                          </s-text>
+                          <s-text tone="subdued" size="small">
+                            •
+                          </s-text>
+                          <s-text tone="subdued" size="small">
+                            {new Date(product.createdAt).toLocaleDateString()}
+                          </s-text>
+                        </s-stack>
+                      </s-stack>
+
+                      {/* Actions */}
+                      <s-stack direction="inline" gap="small">
+                        <s-button
+                          size="small"
+                          onClick={() => {
+                            const productId = product.shopifyProductId.split("/").pop();
+                            window.open(
+                              `https://${settings.shop}/admin/products/${productId}`,
+                              "_blank"
+                            );
+                          }}
+                        >
+                          View in Shopify
+                        </s-button>
+                      </s-stack>
+                    </s-stack>
+                  </s-box>
+                ))}
+              </s-stack>
+
+              <s-stack direction="inline" gap="base" style={{ justifyContent: "center", marginTop: "8px" }}>
+                <s-button href="/app/history">
+                  View All Import History →
+                </s-button>
+              </s-stack>
+            </s-stack>
+          </s-section>
+        )}
+
+        <s-divider />
 
         {/* Step 1: Enter URL */}
         <s-section heading="Step 1: Enter Amazon Product URL">
@@ -340,10 +802,22 @@ export default function Index() {
             <s-stack direction="inline" gap="base">
               <s-button
                 variant="primary"
-                onClick={handleScrape}
-                {...(isFetching ? { loading: true } : {})}
+                onClick={() => {
+                  console.log("Import Product button clicked!", { amazonUrl, termsAccepted: settings.termsAccepted, showImportModal });
+                  if (!amazonUrl.trim()) {
+                    shopify.toast.show("Please enter an Amazon URL", { isError: true });
+                    return;
+                  }
+                  if (!settings.termsAccepted) {
+                    shopify.toast.show("Please accept the terms first", { isError: true });
+                    setShowTermsModal(true);
+                    return;
+                  }
+                  console.log("Opening import modal...");
+                  setShowImportModal(true);
+                }}
               >
-                {isFetching ? "Fetching..." : "🔍 Fetch Product Data"}
+                📦 Import Product
               </s-button>
 
               {!settings.termsAccepted && (

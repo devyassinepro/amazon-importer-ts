@@ -13,8 +13,10 @@ export default function App() {
         />
         <script
           type="module"
-          src="https://cdn.shopify.com/app-home/latest/shopify-app-home-ui-components.js"
+          src="https://cdn.shopify.com/shopifycloud/app-bridge/elements/app-bridge-elements.es.js"
         />
+        <script src="https://cdn.shopify.com/shopifycloud/polaris/v12.22.0/polaris.js" defer></script>
+        <link rel="stylesheet" href="https://cdn.shopify.com/shopifycloud/polaris/v12.22.0/polaris.css" />
         <Meta />
         <Links />
       </head>
