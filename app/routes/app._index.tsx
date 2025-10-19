@@ -19,6 +19,7 @@ import ModeSelector from "~/components/ModeSelector";
 import PricingCalculator from "~/components/PricingCalculator";
 import LoadingState from "~/components/LoadingState";
 import ProductCardList from "~/components/ProductCardList";
+import YouTubeModal from "~/components/YouTubeModal";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -131,6 +132,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       where: { shop: session.shop },
     });
 
+    // Recalculate price with user-selected markup
+    const originalPrice = (productData as any).originalPrice || productData.price;
+    if (importMode === "DROPSHIPPING") {
+      const finalPrice = applyPricingMarkup(originalPrice, markupType, markupValue);
+      productData.price = finalPrice;
+    } else {
+      // Affiliate mode: keep original price
+      productData.price = originalPrice;
+    }
+
     const result = await createShopifyProduct(
       admin,
       productData,
@@ -196,6 +207,7 @@ export default function Index() {
   const shopify = useAppBridge();
 
   const [showTermsBlocker, setShowTermsBlocker] = useState(!settings.termsAccepted);
+  const [showVideoModal, setShowVideoModal] = useState(false);
   const [amazonUrl, setAmazonUrl] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [productData, setProductData] = useState<any>(null);
@@ -287,6 +299,13 @@ export default function Index() {
         onAccept={handleAcceptTerms}
       />
 
+      {/* YouTube Video Modal */}
+      <YouTubeModal
+        show={showVideoModal}
+        onClose={() => setShowVideoModal(false)}
+        videoId="dQw4w9WgXcQ"
+      />
+
       <s-page heading="📦 Import Amazon Products">
         <s-button slot="primary-action" href="/app/history">
           📊 View History
@@ -302,6 +321,62 @@ export default function Index() {
               Import products from Amazon to your Shopify store in Affiliate or Dropshipping mode.
               Configure pricing, add to collections, and publish instantly.
             </s-text>
+
+            {/* Video Tutorial Button */}
+            <div
+              onClick={() => setShowVideoModal(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "16px 20px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                borderRadius: "12px",
+                cursor: "pointer",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                boxShadow: "0 4px 6px -1px rgba(102, 126, 234, 0.3)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(102, 126, 234, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(102, 126, 234, 0.3)";
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "48px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                ▶️
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3
+                  style={{
+                    margin: "0 0 4px 0",
+                    color: "white",
+                    fontSize: "18px",
+                    fontWeight: "600",
+                  }}
+                >
+                  Watch Tutorial Video
+                </h3>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "rgba(255, 255, 255, 0.9)",
+                    fontSize: "14px",
+                  }}
+                >
+                  Learn how to import products from Amazon in 5 minutes
+                </p>
+              </div>
+            </div>
           </s-stack>
         </s-section>
 
@@ -333,25 +408,6 @@ export default function Index() {
             </s-stack>
           </s-stack>
         </s-section>
-
-        {/* Recent Products */}
-        {recentProducts && recentProducts.length > 0 && (
-          <s-section heading="📦 Recently Imported Products">
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
-              {recentProducts.slice(0, 5).map((product: any) => (
-                <ProductCardList key={product.id} product={product} shop={settings.shop} />
-              ))}
-            </div>
-            {recentProducts.length > 3 && (
-              <s-stack direction="inline" gap="base" style={{ justifyContent: "center", marginTop: "24px" }}>
-                <s-button href="/app/history">
-                  View All Import History →
-                </s-button>
-              </s-stack>
-            )}
-
-          </s-section>
-        )}
 
         <s-divider />
 
@@ -462,43 +518,74 @@ export default function Index() {
             <s-section heading="Step 4: Publish Settings">
               <s-stack direction="block" gap="base">
                 {/* Product Status - Native Select */}
-                <div className="form-field">
-                  <label htmlFor="productStatus" className="form-label">
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label htmlFor="productStatus" style={{ fontSize: "13px", fontWeight: "600", color: "#202223" }}>
                     Product Status
                   </label>
                   <select
                     id="productStatus"
-                    className="form-select"
                     value={productStatus}
                     onChange={(e) => setProductStatus(e.target.value as "DRAFT" | "ACTIVE")}
+                    style={{
+                      padding: "8px 12px",
+                      border: "1px solid #c9cccf",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      backgroundColor: "white",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
                   >
-                    <option value="DRAFT">💾 Draft (not visible to customers)</option>
-                    <option value="ACTIVE">✅ Active (publish immediately)</option>
+                    <option value="DRAFT">📝 Draft</option>
+                    <option value="ACTIVE">✅ Active</option>
                   </select>
                 </div>
 
                 {/* Collection Selector - Native Select */}
-                <div className="form-field">
-                  <label htmlFor="selectedCollection" className="form-label">
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label htmlFor="selectedCollection" style={{ fontSize: "13px", fontWeight: "600", color: "#202223" }}>
                     Add to Collection (optional)
                   </label>
                   <select
                     id="selectedCollection"
-                    className="form-select"
                     value={selectedCollection}
                     onChange={(e) => setSelectedCollection(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      border: "1px solid #c9cccf",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      backgroundColor: "white",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
                   >
                     <option value="">-- No Collection --</option>
-                    {collections.map((c: any) => (
-                      <option key={c.id} value={c.id}>
-                        {c.title}
-                      </option>
-                    ))}
+                    {collections && collections.length > 0 ? (
+                      collections.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))
+                    ) : null}
                   </select>
-                  <span className="form-help-text">
-                    {collections.length === 0
-                      ? "No collections found in your store. Create one in Shopify admin first."
-                      : `Choose from ${collections.length} collection(s) in your store`}
+                  <span style={{ fontSize: "13px", color: "#6d7175", marginTop: "4px" }}>
+                    {!collections || collections.length === 0 ? (
+                      <>
+                        ⚠️ No collections found in your store.{" "}
+                        <a
+                          href={`https://${settings.shop}/admin/collections`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "#008060", textDecoration: "underline" }}
+                        >
+                          Create one in Shopify admin
+                        </a>{" "}
+                        first.
+                      </>
+                    ) : (
+                      `✅ ${collections.length} collection(s) available`
+                    )}
                   </span>
                 </div>
 
@@ -519,12 +606,30 @@ export default function Index() {
           </>
         )}
 
+        {/* Recent Products */}
+        {recentProducts && recentProducts.length > 0 && (
+          <s-section heading="📦 Recently Imported Products">
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+              {recentProducts.slice(0, 5).map((product: any) => (
+                <ProductCardList key={product.id} product={product} shop={settings.shop} />
+              ))}
+            </div>
+            {recentProducts.length > 3 && (
+              <s-stack direction="inline" gap="base" style={{ justifyContent: "center", marginTop: "24px" }}>
+                <s-button href="/app/history">
+                  View All Import History →
+                </s-button>
+              </s-stack>
+            )}
+
+          </s-section>
+        )}
         {/* Sidebar */}
         <s-section slot="aside" heading="📖 How it Works">
           <s-ordered-list>
             <s-list-item>Accept the Terms of Importation</s-list-item>
             <s-list-item>Paste Amazon product URL</s-list-item>
-            <s-list-item>Click "Fetch Product"</s-list-item>
+            <s-list-item>Click "Import Product"</s-list-item>
             <s-list-item>Choose Affiliate or Dropshipping mode</s-list-item>
             <s-list-item>Configure pricing (if Dropshipping)</s-list-item>
             <s-list-item>Review and publish to your store</s-list-item>
