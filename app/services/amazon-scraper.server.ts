@@ -421,7 +421,7 @@ function formatFromAllProductVariationsOldFormat(
       if (Array.isArray(optionArray)) {
         optionArray.forEach((option: any) => {
           if (option.asin) {
-            availabilityMap[option.asin] = option.is_available !== false;
+            availabilityMap[option.asin] = option.is_available ?? true;
           }
         });
       }
@@ -465,7 +465,7 @@ function formatFromAllProductVariationsOldFormat(
       asin,
       options,
       image,
-      available: availabilityMap[asin] !== false,
+      available: availabilityMap[asin] ?? true,
     });
   });
 
