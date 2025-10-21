@@ -46,6 +46,14 @@ model AppSettings {
   autoPublish              Boolean  @default(false) // Auto-publish imported products
   termsAccepted            Boolean  @default(false)
   termsAcceptedAt          DateTime?
+
+  // Billing fields
+  currentPlan              String   @default("FREE") // FREE, BASIC, PRO, PREMIUM
+  subscriptionId           String?  // Shopify subscription ID
+  subscriptionStatus       String?  // ACTIVE, CANCELLED, EXPIRED
+  planStartDate            DateTime?
+  planEndDate              DateTime?
+
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 }

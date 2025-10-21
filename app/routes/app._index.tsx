@@ -60,6 +60,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     take: 5,
   });
 
+  // Handle billing sync if needed - EXACTLY like Pricefy
+  const url = new URL(request.url);
+  const syncNeeded = url.searchParams.get("sync_needed");
+
+  if (syncNeeded === "1") {
+    const { syncSubscriptionWithShopify } = await import("~/services/billing.server");
+    const syncResult = await syncSubscriptionWithShopify(admin, session.shop);
+
+    if (syncResult.success) {
+      console.log(`✅ Subscription synced to ${syncResult.syncedPlan}`);
+    } else {
+      console.error(`❌ Sync failed: ${syncResult.error}`);
+    }
+  }
+
   return { settings, collections, recentProducts };
 };
 
@@ -126,6 +141,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const importMode = formData.get("importMode") as ImportMode;
     const markupValue = parseFloat(formData.get("markupValue") as string || "0");
     const markupType = formData.get("markupType") as PricingMode;
+
+    // Check product limit before importing
+    const { checkProductLimit } = await import("~/services/billing.server");
+    const limitCheck = await checkProductLimit(session.shop);
+
+    if (!limitCheck.allowed) {
+      return {
+        error: `Product limit reached! You have ${limitCheck.currentCount}/${limitCheck.limit} products on the ${limitCheck.plan} plan. Please upgrade your plan to import more products.`,
+        limitReached: true,
+        currentPlan: limitCheck.plan,
+        productCount: limitCheck.currentCount,
+        productLimit: limitCheck.limit,
+      };
+    }
 
     const productData: ScrapedProduct = JSON.parse(productDataJson);
     const settings = await prisma.appSettings.findUnique({
@@ -228,6 +257,36 @@ export default function Index() {
   const isLoading = fetcher.state === "submitting" || fetcher.state === "loading";
   const isFetching = isLoading && fetcher.formData?.get("action") === "scrape";
 
+  // Handle billing return - EXACTLY like Pricefy
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const billingCompleted = url.searchParams.get("billing_completed");
+    const syncNeeded = url.searchParams.get("sync_needed");
+    const plan = url.searchParams.get("plan");
+
+    if (billingCompleted === "1") {
+      if (plan) {
+        shopify.toast.show(`✅ Successfully upgraded to ${plan.toUpperCase()} plan!`, {
+          duration: 5000,
+        });
+      }
+
+      // Clean URL params
+      url.searchParams.delete("billing_completed");
+      url.searchParams.delete("sync_needed");
+      url.searchParams.delete("plan");
+      url.searchParams.delete("charge_id");
+      window.history.replaceState({}, '', url.toString());
+
+      // Reload page to sync subscription if needed
+      if (syncNeeded === "1") {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (fetcher.data?.action === "termsAccepted") {
       setShowTermsBlocker(false);
@@ -243,6 +302,18 @@ export default function Index() {
       setProductData(null);
     } else if (fetcher.data?.error) {
       shopify.toast.show(fetcher.data.error, { isError: true });
+
+      // If limit reached, show upgrade prompt
+      if (fetcher.data?.limitReached && fetcher.data.currentPlan) {
+        const plan = fetcher.data.currentPlan;
+        const count = fetcher.data.productCount;
+        const limit = fetcher.data.productLimit;
+        setTimeout(() => {
+          if (confirm(`You've reached your ${plan} plan limit (${count}/${limit} products). Would you like to upgrade now?`)) {
+            window.location.href = "/app/billing";
+          }
+        }, 1000);
+      }
     }
   }, [fetcher.data, shopify]);
 

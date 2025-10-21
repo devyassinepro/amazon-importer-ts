@@ -17,7 +17,8 @@
       "Bash(npm uninstall:*)",
       "Bash(npm run setup:*)",
       "Bash(node check-db.cjs:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Read(//Users/touzani/Desktop/amazon-importer/**)"
     ]
   },
   "enableAllProjectMcpServers": true,
