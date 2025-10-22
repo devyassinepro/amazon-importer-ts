@@ -2,7 +2,7 @@
 
 client_id = "3a811626e23613464cb593fcadac31b3"
 name = "Amazon Importer"
-application_url = "https://example.com"
+application_url = "https://amazonimporter-app-zffzk.ondigitalocean.app"
 embedded = true
 
 [build]
@@ -26,3 +26,8 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [ "https://example.com/api/auth" ]
+
+# Legal URLs for App Store approval  
+privacy_policy_url = "https://amazonimporter-app-zffzk.ondigitalocean.app/privacy-policy"
+terms_of_service_url = "https://amazonimporter-app-zffzk.ondigitalocean.app/terms-of-service"
+support_url = "https://amazonimporter-app-zffzk.ondigitalocean.app/support"
