@@ -1,16 +1,35 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
-import db from "../db.server";
+import { prisma } from "../db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { shop, session, topic } = await authenticate.webhook(request);
 
-  console.log(`Received ${topic} webhook for ${shop}`);
+  console.log(`🗑️  Received ${topic} webhook for ${shop}`);
 
-  // Webhook requests can trigger multiple times and after an app has already been uninstalled.
-  // If this webhook already ran, the session may have been deleted previously.
-  if (session) {
-    await db.session.deleteMany({ where: { shop } });
+  // Delete all user data (GDPR compliance)
+  try {
+    // Delete imported products
+    const deletedProducts = await prisma.importedProduct.deleteMany({
+      where: { shop }
+    });
+    console.log(`Deleted ${deletedProducts.count} imported products for ${shop}`);
+
+    // Delete app settings
+    const deletedSettings = await prisma.appSettings.deleteMany({
+      where: { shop }
+    });
+    console.log(`Deleted app settings for ${shop}`);
+
+    // Delete sessions
+    const deletedSessions = await prisma.session.deleteMany({
+      where: { shop }
+    });
+    console.log(`Deleted ${deletedSessions.count} sessions for ${shop}`);
+
+    console.log(`✅ Successfully deleted all data for ${shop}`);
+  } catch (error) {
+    console.error(`❌ Error deleting data for ${shop}:`, error);
   }
 
   return new Response();
