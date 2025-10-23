@@ -1,43 +1,45 @@
-import { json, LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+/**
+ * Privacy Policy Page (Public)
+ * Accessible at: /privacy-policy
+ */
+
+import type { LoaderFunctionArgs } from "react-router";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  return json({
-    lastUpdated: "2025-07-28",
+  return {
+    lastUpdated: "2025-10-20",
     appName: "Amazon Importer",
     contactEmail: "devyassinepro@gmail.com"
-  });
+  };
 };
 
 export default function PrivacyPolicy() {
-  const { lastUpdated, appName, contactEmail } = useLoaderData<typeof loader>();
-  
   return (
-    <div style={{ 
-      maxWidth: "800px", 
-      margin: "0 auto", 
+    <div style={{
+      maxWidth: "800px",
+      margin: "0 auto",
       padding: "2rem",
       fontFamily: "system-ui, sans-serif",
       lineHeight: "1.6"
     }}>
       <h1>Privacy Policy</h1>
-      <p><strong>Last updated:</strong> {lastUpdated}</p>
-      
+      <p><strong>Last updated:</strong> October 20, 2025</p>
+
       <h2>1. Information We Collect</h2>
       <p>
-        When you use {appName}, we collect the following information:
+        When you use Amazon Importer, we collect the following information:
       </p>
       <ul>
         <li><strong>Shop Information:</strong> Your shop domain, plan details, and usage statistics</li>
-        <li><strong>Product Data:</strong> Product titles, prices, and variants for pricing modifications</li>
+        <li><strong>Product Data:</strong> Product titles, prices, images, and descriptions from Amazon</li>
         <li><strong>Usage Data:</strong> How you interact with our app, features used, and performance metrics</li>
         <li><strong>Technical Data:</strong> IP address, browser type, and device information</li>
       </ul>
 
       <h2>2. How We Use Your Information</h2>
       <ul>
-        <li>Provide and maintain the pricing modification service</li>
-        <li>Process your pricing updates and track usage quotas</li>
+        <li>Provide and maintain the Amazon product import service</li>
+        <li>Process your product imports and track usage quotas</li>
         <li>Send important service notifications and updates</li>
         <li>Improve our app's functionality and user experience</li>
         <li>Provide customer support</li>
@@ -62,6 +64,7 @@ export default function PrivacyPolicy() {
         <li>When required by law</li>
         <li>To protect our rights and safety</li>
         <li>With your explicit consent</li>
+        <li>With Amazon (as required for affiliate program compliance)</li>
       </ul>
 
       <h2>5. Your Rights (GDPR)</h2>
@@ -80,12 +83,32 @@ export default function PrivacyPolicy() {
         When you uninstall the app, your data is automatically deleted within 30 days.
       </p>
 
-      <h2>7. Contact Us</h2>
+      <h2>7. Cookies and Tracking</h2>
+      <p>
+        We use cookies and similar technologies to:
+      </p>
+      <ul>
+        <li>Maintain your session</li>
+        <li>Remember your preferences</li>
+        <li>Analyze app usage</li>
+      </ul>
+
+      <h2>8. Contact Us</h2>
       <p>
         For any questions about this Privacy Policy, contact us at:
         <br />
-        Email: <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
+        Email: <a href="mailto:devyassinepro@gmail.com">devyassinepro@gmail.com</a>
       </p>
+
+      <div style={{
+        marginTop: "3rem",
+        paddingTop: "2rem",
+        borderTop: "1px solid #e5e5e5",
+        textAlign: "center",
+        color: "#666"
+      }}>
+        <p>© 2025 Amazon Importer. All rights reserved.</p>
+      </div>
     </div>
   );
 }
