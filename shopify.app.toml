@@ -11,14 +11,28 @@ automatically_update_urls_on_dev = true
 [webhooks]
 api_version = "2026-01"
 
-  # App lifecycle webhooks
-  [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "/webhooks/app/uninstalled"
+# App lifecycle webhooks
+[[webhooks.subscriptions]]
+topics = [ "app/uninstalled" ]
+uri = "/webhooks/app/uninstalled"
 
-  [[webhooks.subscriptions]]
-  topics = [ "app/scopes_update" ]
-  uri = "/webhooks/app/scopes_update"
+[[webhooks.subscriptions]]
+topics = [ "app/scopes_update" ]
+uri = "/webhooks/app/scopes_update"
+
+
+# ✅ GDPR compliance webhooks - ALL pointing to same endpoint
+[[webhooks.subscriptions]]
+topics = [ "customers/data_request" ]
+uri = "/webhooks/gdpr"
+
+[[webhooks.subscriptions]]
+topics = [ "customers/redact" ]
+uri = "/webhooks/gdpr"
+
+[[webhooks.subscriptions]]
+topics = [ "shop/redact" ]
+uri = "/webhooks/gdpr"
 
   # Note: GDPR webhooks (customers/data_request, customers/redact, shop/redact)
   # are NOT declared here. They are automatically managed by Shopify.

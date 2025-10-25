@@ -1,0 +1,24 @@
+# GDPR Webhook Configuration
+# These webhooks are mandatory for Shopify App Store approval
+
+webhooks:
+  # Customer Data Request (GDPR Article 15)
+  - topic: customers/data_request
+    address: https://amazonimporter-app-zffzk.ondigitalocean.app/webhooks/customers/data_request
+    format: json
+
+  # Customer Data Erasure (GDPR Article 17)
+  - topic: customers/redact
+    address: https://amazonimporter-app-zffzk.ondigitalocean.app/webhooks/customers/redact
+    format: json
+
+  # Shop Data Erasure (48h after uninstall)
+  - topic: shop/redact
+    address: https://amazonimporter-app-zffzk.ondigitalocean.app/webhooks/shop/redact
+    format: json
+
+# Note: These webhooks are automatically verified by Shopify during app review
+# Make sure all endpoints:
+# 1. Return HTTP 200 OK
+# 2. Validate HMAC signatures
+# 3. Complete within 5 seconds
