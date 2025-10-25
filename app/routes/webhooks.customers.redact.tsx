@@ -6,9 +6,22 @@
  * You must delete all customer data related to this customer.
  */
 
-import type { ActionFunctionArgs } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import { prisma } from "../db.server";
+
+// Handle GET requests (for verification)
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  return new Response(JSON.stringify({
+    webhook: "customers/redact",
+    status: "ready",
+    message: "This endpoint accepts POST requests from Shopify with valid HMAC signatures",
+    timestamp: new Date().toISOString()
+  }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
+  });
+};
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { shop, payload, topic } = await authenticate.webhook(request);
