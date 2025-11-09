@@ -60,11 +60,110 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     take: 5,
   });
 
-  // Handle billing sync if needed - EXACTLY like Pricefy
+  // Handle billing completion and sync - EXACTLY like Pricefy
   const url = new URL(request.url);
+  const billingCompleted = url.searchParams.get("billing_completed");
+  const billingSuccess = url.searchParams.get("billing_success");
+  const planUpgraded = url.searchParams.get("plan");
+  const billingError = url.searchParams.get("billing_error");
+  const needsManualSync = url.searchParams.get("needs_manual_sync");
+  const chargeId = url.searchParams.get("charge_id");
   const syncNeeded = url.searchParams.get("sync_needed");
 
-  if (syncNeeded === "1") {
+  let billingMessage = null;
+  let billingStatus = null;
+  let autoSyncResult = null;
+
+  // Force auto-sync when billing is completed
+  if ((billingCompleted === "1" || billingSuccess === "1") && planUpgraded) {
+    billingStatus = "success";
+    console.log(`✅ Billing completion detected: ${planUpgraded} plan, charge: ${chargeId}`);
+
+    try {
+      console.log(`🔄 Force syncing subscription after billing completion...`);
+      const { autoSyncSubscription } = await import("~/lib/auto-sync.server");
+      const { BILLING_PLANS } = await import("~/lib/billing-plans");
+
+      autoSyncResult = await autoSyncSubscription(admin, session.shop);
+
+      if (autoSyncResult?.success) {
+        const detectedPlan = BILLING_PLANS[autoSyncResult.syncedPlan as keyof typeof BILLING_PLANS]?.displayName || autoSyncResult.syncedPlan;
+        billingMessage = `🎉 Payment successful! You're now on the ${detectedPlan} plan. Your new limits are active immediately.`;
+        console.log(`✅ Auto-sync successful after billing: ${autoSyncResult.message}`);
+      } else {
+        // If auto-sync fails, try to update manually based on the plan parameter
+        console.log(`⚠️ Auto-sync failed, attempting manual update based on plan parameter: ${planUpgraded}`);
+
+        const { BILLING_PLANS } = await import("~/lib/billing-plans");
+        if (BILLING_PLANS[planUpgraded as keyof typeof BILLING_PLANS]) {
+          const plan = BILLING_PLANS[planUpgraded as keyof typeof BILLING_PLANS];
+
+          await prisma.appSettings.update({
+            where: { shop: session.shop },
+            data: {
+              currentPlan: planUpgraded as any,
+              subscriptionStatus: "ACTIVE",
+              subscriptionId: chargeId || `manual_${Date.now()}`,
+              planStartDate: new Date(),
+              planEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            },
+          });
+
+          billingMessage = `🎉 Payment successful! You're now on the ${plan.displayName} plan. Your new limits are active.`;
+          console.log(`✅ Manual plan update successful: ${plan.displayName}`);
+        } else {
+          billingMessage = `✅ Payment processed! Please refresh the page to see your new plan.`;
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error during post-billing sync:", error);
+      billingMessage = `✅ Payment successful! Your plan is being updated. Please refresh if you don't see changes shortly.`;
+    }
+  }
+
+  // Handle manual sync needed cases
+  if (needsManualSync === "1" && !billingStatus) {
+    console.log(`🔄 Manual sync needed after billing return...`);
+
+    try {
+      const { autoSyncSubscription } = await import("~/lib/auto-sync.server");
+      const { BILLING_PLANS } = await import("~/lib/billing-plans");
+
+      autoSyncResult = await autoSyncSubscription(admin, session.shop);
+
+      if (autoSyncResult?.success) {
+        billingStatus = "success";
+        const detectedPlan = BILLING_PLANS[autoSyncResult.syncedPlan as keyof typeof BILLING_PLANS]?.displayName || autoSyncResult.syncedPlan;
+        billingMessage = `🎉 Plan synchronized! You're now on the ${detectedPlan} plan.`;
+        console.log(`✅ Manual sync successful: ${autoSyncResult.message}`);
+      } else {
+        console.log(`ℹ️ Manual sync result: ${autoSyncResult?.message || autoSyncResult?.error}`);
+      }
+    } catch (error) {
+      console.error("❌ Manual sync error:", error);
+    }
+  }
+
+  // Handle billing errors
+  if (billingError && !billingStatus) {
+    billingStatus = "error";
+    switch (billingError) {
+      case "missing_params":
+        billingMessage = "❌ Invalid payment information. Please try again.";
+        break;
+      case "invalid_plan":
+        billingMessage = "❌ Invalid plan selected. Please try again.";
+        break;
+      case "processing_error":
+        billingMessage = "⚠️ An error occurred during billing. Please try again or contact support.";
+        break;
+      default:
+        billingMessage = "⚠️ An unexpected error occurred. Please try again.";
+    }
+  }
+
+  // Legacy sync_needed parameter support
+  if (syncNeeded === "1" && !billingStatus) {
     const { syncSubscriptionWithShopify } = await import("~/services/billing.server");
     const syncResult = await syncSubscriptionWithShopify(admin, session.shop);
 
@@ -75,7 +174,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
-  return { settings, collections, recentProducts };
+  return { settings, collections, recentProducts, billingMessage, billingStatus };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -231,7 +330,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Index() {
-  const { settings, collections, recentProducts } = useLoaderData<typeof loader>();
+  const { settings, collections, recentProducts, billingMessage, billingStatus } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
 
@@ -261,31 +360,28 @@ export default function Index() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const billingCompleted = url.searchParams.get("billing_completed");
-    const syncNeeded = url.searchParams.get("sync_needed");
-    const plan = url.searchParams.get("plan");
+    const billingError = url.searchParams.get("billing_error");
 
-    if (billingCompleted === "1") {
-      if (plan) {
-        shopify.toast.show(`✅ Successfully upgraded to ${plan.toUpperCase()} plan!`, {
-          duration: 5000,
-        });
-      }
+    // Show billing message if available
+    if (billingMessage) {
+      shopify.toast.show(billingMessage, {
+        duration: 5000,
+        isError: billingStatus === "error",
+      });
+    }
 
-      // Clean URL params
+    // Clean URL params after showing message
+    if (billingCompleted === "1" || billingError) {
       url.searchParams.delete("billing_completed");
+      url.searchParams.delete("billing_success");
       url.searchParams.delete("sync_needed");
       url.searchParams.delete("plan");
       url.searchParams.delete("charge_id");
+      url.searchParams.delete("billing_error");
+      url.searchParams.delete("needs_manual_sync");
       window.history.replaceState({}, '', url.toString());
-
-      // Reload page to sync subscription if needed
-      if (syncNeeded === "1") {
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      }
     }
-  }, []);
+  }, [billingMessage, billingStatus]);
 
   useEffect(() => {
     if (fetcher.data?.action === "termsAccepted") {
@@ -444,7 +540,7 @@ export default function Index() {
                     fontSize: "14px",
                   }}
                 >
-                  Learn how to import products from Amazon in 5 minutes
+                  Learn how to import products from Amazon in 3 minutes
                 </p>
               </div>
             </div>

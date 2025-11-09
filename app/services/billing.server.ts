@@ -46,8 +46,9 @@ export async function createSubscription(
     }
 
     // Create return URL - EXACTLY like Pricefy
+    // Point to billing-return route which will handle subscription update, then redirect to /app
     const appUrl = process.env.SHOPIFY_APP_URL || `https://${shop}/admin/apps/${process.env.SHOPIFY_APP_HANDLE || "amazon-importer"}`;
-    const returnUrl = `${appUrl}/app?billing_completed=1&sync_needed=1&plan=${planName}`;
+    const returnUrl = `${appUrl}/billing-return?shop=${shop}&plan=${planName}`;
 
     console.log(`🔄 Creating subscription for ${shop}:`, {
       plan: plan.displayName,
@@ -126,7 +127,7 @@ export async function createSubscription(
 
         return {
           success: true,
-          confirmationUrl: returnUrl.replace('billing_completed=1', 'billing_completed=1&dev_mode=1')
+          confirmationUrl: returnUrl + '&dev_mode=1'
         };
       }
 

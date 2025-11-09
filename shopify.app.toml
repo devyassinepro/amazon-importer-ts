@@ -20,6 +20,11 @@ uri = "/webhooks/app/uninstalled"
 topics = [ "app/scopes_update" ]
 uri = "/webhooks/app/scopes_update"
 
+# Billing webhooks - Auto-upgrade subscriptions
+[[webhooks.subscriptions]]
+topics = [ "app_subscriptions/update" ]
+uri = "/webhooks/app/subscriptions_update"
+
 # GDPR Mandatory Compliance Webhooks
 [[webhooks.subscriptions]]
 compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
