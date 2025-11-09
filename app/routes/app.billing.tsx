@@ -278,7 +278,7 @@ export default function BillingPage() {
                 >
                   <div style={{ marginBottom: "12px" }}>
                     <strong style={{ fontSize: "16px", color: "#202223" }}>
-                      📦 {plan.productLimit} Products
+                      📦 {plan.productLimit} imports / month
                     </strong>
                   </div>
 
@@ -290,7 +290,7 @@ export default function BillingPage() {
                         <span style={{ color: "#bf0711" }}>❌</span>
                       )}
                       <span style={{ fontSize: "14px", color: "#202223" }}>
-                        "Buy on Amazon" Button
+                       Affiliate Mode
                       </span>
                     </div>
 

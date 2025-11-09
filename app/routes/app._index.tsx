@@ -374,7 +374,7 @@ export default function Index() {
       <YouTubeModal
         show={showVideoModal}
         onClose={() => setShowVideoModal(false)}
-        videoId="dQw4w9WgXcQ"
+        videoId="P7sNIYPlRiY"
       />
 
       <s-page heading="📦 Import Amazon Products">

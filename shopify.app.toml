@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "3a811626e23613464cb593fcadac31b3"
-name = "Amazon Importer Dropship"
+name = "DropAffilate : Amazon Importer"
 application_url = "https://amazonimporter-app-zffzk.ondigitalocean.app"
 embedded = true
 
