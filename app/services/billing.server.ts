@@ -22,7 +22,8 @@ export interface BillingResult {
 export async function createSubscription(
   admin: AdminApiContext,
   shop: string,
-  planName: PlanName
+  planName: PlanName,
+  request?: Request
 ): Promise<BillingResult> {
   try {
     const plan = BILLING_PLANS[planName];
@@ -46,9 +47,23 @@ export async function createSubscription(
     }
 
     // Create return URL - EXACTLY like Pricefy
+    // Encode host parameter for embedded app redirect
+    const host = Buffer.from(`${shop}/admin`).toString('base64');
+
+    // Get app URL - use request origin if available (works with tunnel), fallback to env var
+    let appUrl: string;
+    if (request) {
+      const url = new URL(request.url);
+      appUrl = `${url.protocol}//${url.host}`;
+    } else {
+      appUrl = process.env.SHOPIFY_APP_URL || '';
+      if (!appUrl) {
+        throw new Error("SHOPIFY_APP_URL environment variable is required for billing");
+      }
+    }
+
     // Point to billing-return route which will handle subscription update, then redirect to /app
-    const appUrl = process.env.SHOPIFY_APP_URL || `https://${shop}/admin/apps/${process.env.SHOPIFY_APP_HANDLE || "amazon-importer-32"}`;
-    const returnUrl = `${appUrl}/billing-return?shop=${shop}&plan=${planName}`;
+    const returnUrl = `${appUrl}/billing-return?shop=${shop}&plan=${planName}&host=${host}`;
 
     console.log(`🔄 Creating subscription for ${shop}:`, {
       plan: plan.displayName,
