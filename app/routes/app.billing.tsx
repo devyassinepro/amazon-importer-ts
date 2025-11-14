@@ -61,7 +61,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const planName = formData.get("plan") as PlanName;
 
     try {
-      const result = await createSubscription(admin, session.shop, planName, request);
+      const result = await createSubscription(admin, session.shop, planName);
 
       if (planName === "FREE") {
         return { success: true, message: "Switched to Free Plan" };

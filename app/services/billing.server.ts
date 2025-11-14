@@ -22,8 +22,7 @@ export interface BillingResult {
 export async function createSubscription(
   admin: AdminApiContext,
   shop: string,
-  planName: PlanName,
-  request?: Request
+  planName: PlanName
 ): Promise<BillingResult> {
   try {
     const plan = BILLING_PLANS[planName];
@@ -50,17 +49,18 @@ export async function createSubscription(
     // Encode host parameter for embedded app redirect
     const host = Buffer.from(`${shop}/admin`).toString('base64');
 
-    // Get app URL - use request origin if available (works with tunnel), fallback to env var
-    let appUrl: string;
-    if (request) {
-      const url = new URL(request.url);
-      appUrl = `${url.protocol}//${url.host}`;
-    } else {
-      appUrl = process.env.SHOPIFY_APP_URL || '';
-      if (!appUrl) {
-        throw new Error("SHOPIFY_APP_URL environment variable is required for billing");
-      }
+    // Get app URL from environment
+    // In development, use the tunnel URL; in production, use the configured URL
+    const appUrl = process.env.SHOPIFY_APP_URL;
+    if (!appUrl) {
+      throw new Error(
+        "SHOPIFY_APP_URL environment variable is required for billing.\n" +
+        "In development: Copy the tunnel URL from 'npm run dev' console and add it to .env.development\n" +
+        "Example: SHOPIFY_APP_URL=\"https://xxxxx.trycloudflare.com\""
+      );
     }
+
+    console.log(`📱 Using app URL for billing redirect: ${appUrl}`);
 
     // Point to billing-return route which will handle subscription update, then redirect to /app
     const returnUrl = `${appUrl}/billing-return?shop=${shop}&plan=${planName}&host=${host}`;

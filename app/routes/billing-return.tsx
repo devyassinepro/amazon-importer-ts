@@ -1,6 +1,6 @@
 // app/routes/billing-return.tsx
 // Handles the return from Shopify billing page after payment confirmation
-import { LoaderFunctionArgs, redirect } from "react-router";
+import { LoaderFunctionArgs } from "react-router";
 import { prisma } from "~/db.server";
 import { BILLING_PLANS, type PlanName } from "~/lib/billing-plans";
 
@@ -74,25 +74,130 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Continue with redirect but flag for manual sync
     }
 
-    // Proper embedded app redirect with billing_completed flag
-    if (host) {
-      const redirectUrl = `/app?host=${host}&billing_completed=1&plan=${planName}&charge_id=${chargeId || ''}`;
-      console.log(`🔗 Redirecting with host parameter: ${redirectUrl}`);
-      return redirect(redirectUrl);
-    } else {
-      const redirectUrl = `/app?billing_completed=1&plan=${planName}&shop=${shopDomain}&charge_id=${chargeId || ''}`;
-      console.log(`🔗 Fallback redirect: ${redirectUrl}`);
-      return redirect(redirectUrl);
-    }
+    // Return data for client-side redirect (to maintain embedded app context)
+    const redirectUrl = host
+      ? `/app?host=${host}&billing_completed=1&plan=${planName}&charge_id=${chargeId || ''}`
+      : `/app?billing_completed=1&plan=${planName}&shop=${shopDomain}&charge_id=${chargeId || ''}`;
+
+    console.log(`🔗 Prepared redirect URL: ${redirectUrl}`);
+
+    return {
+      success: true,
+      redirectUrl,
+      host,
+      shop: shopDomain,
+      apiKey: process.env.SHOPIFY_API_KEY || "",
+    };
 
   } catch (error: any) {
     console.error("💥 Error in billing return:", error);
 
-    // Always redirect to app with error info
     const url = new URL(request.url);
     const host = url.searchParams.get("host");
-    const hostParam = host ? `&host=${host}` : '';
 
-    return redirect(`/app?billing_error=processing_error${hostParam}`);
+    return {
+      success: false,
+      redirectUrl: host
+        ? `/app?host=${host}&billing_error=processing_error`
+        : '/app?billing_error=processing_error',
+      host,
+      shop: null,
+      apiKey: process.env.SHOPIFY_API_KEY || "",
+    };
   }
 };
+
+// Component that handles client-side redirect with App Bridge
+export default function BillingReturn() {
+  const apiKey = process.env.SHOPIFY_API_KEY || "";
+
+  return (
+    <html>
+      <head>
+        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                // Get the full URL with all parameters
+                const params = new URLSearchParams(window.location.search);
+                const host = params.get('host');
+                const plan = params.get('plan');
+                const chargeId = params.get('charge_id');
+                const shop = params.get('shop');
+
+                console.log('🔄 Billing return - params:', { host, plan, chargeId, shop });
+
+                // Build redirect path (without host param to avoid double encoding)
+                let redirectPath = '/app?billing_completed=1';
+                if (plan) redirectPath += '&plan=' + plan;
+                if (chargeId) redirectPath += '&charge_id=' + chargeId;
+
+                console.log('🔗 Redirecting to:', redirectPath);
+
+                // Try App Bridge redirect first (for embedded app)
+                if (host && window.shopify && window.shopify.environment) {
+                  try {
+                    console.log('✅ Using App Bridge redirect');
+                    const app = window.shopify.AppBridge.createApp({
+                      apiKey: '${apiKey}',
+                      host: host,
+                    });
+                    const redirect = window.shopify.AppBridge.actions.Redirect.create(app);
+                    redirect.dispatch(window.shopify.AppBridge.actions.Redirect.Action.APP, redirectPath);
+                    return;
+                  } catch (error) {
+                    console.warn('⚠️ App Bridge redirect failed:', error);
+                  }
+                }
+
+                // Fallback to top-level redirect with host param
+                const fullUrl = host ? redirectPath + '&host=' + host : redirectPath;
+                console.log('🔄 Fallback redirect to:', fullUrl);
+
+                if (window.top) {
+                  window.top.location.href = fullUrl;
+                } else {
+                  window.location.href = fullUrl;
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <h2>✅ Payment Confirmed!</h2>
+            <p>Redirecting you back to the app...</p>
+            <div style={{ marginTop: '20px' }}>
+              <div className="loader" style={{
+                border: '4px solid #f3f3f3',
+                borderTop: '4px solid #008060',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto'
+              }}></div>
+            </div>
+          </div>
+        </div>
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}
+        </style>
+      </body>
+    </html>
+  );
+}
