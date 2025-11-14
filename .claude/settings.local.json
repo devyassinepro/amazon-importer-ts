@@ -22,7 +22,9 @@
       "Bash(chmod +x /Users/touzani/Desktop/amazon-importer/amazon-importer-ts/scripts/configure-gdpr-webhooks.js)",
       "Bash(node /Users/touzani/Desktop/amazon-importer/amazon-importer-ts/scripts/configure-gdpr-webhooks.js)",
       "Bash(shopify app deploy:*)",
-      "WebFetch(domain:shopify.dev)"
+      "WebFetch(domain:shopify.dev)",
+      "Bash(rm:*)",
+      "Bash(kill:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

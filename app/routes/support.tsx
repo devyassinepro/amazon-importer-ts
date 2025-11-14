@@ -70,7 +70,7 @@ export default function Support() {
           <br />
           • <strong>Multiplier:</strong> Multiply price by X (e.g., 1.2 = 20% markup)
           <br />
-          • <strong>Fixed:</strong> Add fixed amount (e.g., +5.00 EUR)
+          • <strong>Fixed:</strong> Add fixed amount (e.g., +5.00 USD)
         </p>
 
         <h3>Can I edit products after importing?</h3>

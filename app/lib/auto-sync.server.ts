@@ -138,7 +138,7 @@ async function syncFromAppSubscriptions(admin: AdminApiContext, shop: string): P
     return {
       success: true,
       syncedPlan: detectedPlan,
-      message: `Synced from AppSubscription: ${BILLING_PLANS[detectedPlan].displayName} (€${amount})`,
+      message: `Synced from AppSubscription: ${BILLING_PLANS[detectedPlan].displayName} ($${amount})`,
       source: 'AppSubscription'
     };
 
@@ -211,7 +211,7 @@ async function syncFromAppCharges(admin: AdminApiContext, shop: string): Promise
     return {
       success: true,
       syncedPlan: detectedPlan,
-      message: `Synced from AppRecurringApplicationCharge: ${BILLING_PLANS[detectedPlan].displayName} (€${amount})`,
+      message: `Synced from AppRecurringApplicationCharge: ${BILLING_PLANS[detectedPlan].displayName} ($${amount})`,
       source: 'AppRecurringApplicationCharge'
     };
 
@@ -233,10 +233,10 @@ function mapAmountToPlan(amount: number): PlanName {
   }
 
   // If no exact plan found, try approximate matching
-  if (amount >= 19.50 && amount <= 20.50) return "PREMIUM"; // ~€19.99
-  if (amount >= 9.50 && amount <= 10.50) return "PRO";      // ~€9.99
-  if (amount >= 4.50 && amount <= 5.50) return "BASIC";     // ~€4.99
-  if (amount < 0.50) return "FREE";                         // ~€0.00
+  if (amount >= 19.50 && amount <= 20.50) return "PREMIUM"; // ~$19.99
+  if (amount >= 9.50 && amount <= 10.50) return "PRO";      // ~$9.99
+  if (amount >= 4.50 && amount <= 5.50) return "BASIC";     // ~$4.99
+  if (amount < 0.50) return "FREE";                         // ~$0.00
 
   console.warn(`⚠️ Unknown price amount: ${amount} - defaulting to FREE`);
   return "FREE";

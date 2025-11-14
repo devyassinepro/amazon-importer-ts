@@ -28,7 +28,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const chargeId = charge.id;
 
     console.log(`📋 Processing charge for ${shop}:`);
-    console.log(`💰 Amount: €${amount}`);
+    console.log(`💰 Amount: $${amount}`);
     console.log(`📊 Status: ${status}`);
     console.log(`🆔 ID: ${chargeId}`);
 

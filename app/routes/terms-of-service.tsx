@@ -47,9 +47,9 @@ export default function TermsOfService() {
       <h3>3.1 Plan Types</h3>
       <ul>
         <li><strong>Free Plan:</strong> 20 products - No charge</li>
-        <li><strong>Basic Plan:</strong> €4.99/month - 150 products</li>
-        <li><strong>Pro Plan:</strong> €9.99/month - 1000 products</li>
-        <li><strong>Premium Plan:</strong> €19.99/month - 3000 products</li>
+        <li><strong>Basic Plan:</strong> $4.99/month - 150 products</li>
+        <li><strong>Pro Plan:</strong> $9.99/month - 1000 products</li>
+        <li><strong>Premium Plan:</strong> $19.99/month - 3000 products</li>
       </ul>
 
       <h3>3.2 Billing</h3>

@@ -34,6 +34,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   }
 
+  // Clean up abandoned pending subscriptions (user clicked Decline on Shopify billing page)
+  if (settings.subscriptionStatus === "PENDING" && settings.updatedAt) {
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    if (settings.updatedAt < twoMinutesAgo) {
+      console.log(`🧹 Cleaning up abandoned PENDING subscription for ${session.shop}`);
+      await prisma.appSettings.update({
+        where: { shop: session.shop },
+        data: {
+          subscriptionStatus: "ACTIVE",
+          subscriptionId: null,
+        },
+      });
+      // Reload settings after cleanup
+      settings = await prisma.appSettings.findUnique({
+        where: { shop: session.shop },
+      });
+    }
+  }
+
   const collectionsResponse = await admin.graphql(
     `#graphql
     query getCollections {
@@ -791,6 +810,7 @@ export default function Index() {
 
           </s-section>
         )}
+
         {/* Sidebar */}
         <s-section slot="aside" heading="📖 How it Works">
           <s-ordered-list>
@@ -801,6 +821,33 @@ export default function Index() {
             <s-list-item>Configure pricing (if Dropshipping)</s-list-item>
             <s-list-item>Review and publish to your store</s-list-item>
           </s-ordered-list>
+        </s-section>
+
+        <s-section slot="aside">
+          <div
+            style={{
+              padding: "20px",
+              background: "linear-gradient(135deg, #008060 0%, #00b386 100%)",
+              borderRadius: "12px",
+              color: "white",
+              boxShadow: "0 4px 6px -1px rgba(0, 128, 96, 0.2)",
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: "12px" }}>
+              <div style={{ fontSize: "48px" }}>💡</div>
+            </div>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "16px", fontWeight: "600", textAlign: "center" }}>
+              Don't forget to add the Amazon Buy Button!
+            </h3>
+            <p style={{ margin: "0 0 16px 0", fontSize: "13px", opacity: 0.95, lineHeight: "1.5", textAlign: "center" }}>
+              Install the app block in your theme to show the "Buy on Amazon" button on affiliate products.
+            </p>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <s-button variant="primary" href="/app/setup">
+                📚 View Setup Guide
+              </s-button>
+            </div>
+          </div>
         </s-section>
 
         <s-section slot="aside" heading="✨ Features">

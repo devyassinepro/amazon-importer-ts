@@ -20,6 +20,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const planParam = url.searchParams.get("plan");
   const chargeId = url.searchParams.get("charge_id");
 
+  // Clean up abandoned pending subscriptions (user clicked Decline)
+  const { prisma } = await import("~/db.server");
+  const settings = await prisma.appSettings.findUnique({
+    where: { shop: session.shop },
+  });
+
+  // If subscription is PENDING for more than 2 minutes, reset it
+  // This means user likely declined the payment
+  if (settings?.subscriptionStatus === "PENDING" && settings?.updatedAt) {
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    if (settings.updatedAt < twoMinutesAgo) {
+      console.log(`🧹 Cleaning up abandoned PENDING subscription for ${session.shop}`);
+      await prisma.appSettings.update({
+        where: { shop: session.shop },
+        data: {
+          subscriptionStatus: "ACTIVE",
+          subscriptionId: null,
+        },
+      });
+    }
+  }
+
   const billingStatus = await getBillingStatus(session.shop);
 
   return {
@@ -254,7 +276,7 @@ export default function BillingPage() {
                       color: "#202223",
                     }}
                   >
-                    {plan.price === 0 ? "Free" : `€${plan.price.toFixed(2)}`}
+                    {plan.price === 0 ? "Free" : `$${plan.price.toFixed(2)}`}
                   </span>
                   {plan.price > 0 && (
                     <span

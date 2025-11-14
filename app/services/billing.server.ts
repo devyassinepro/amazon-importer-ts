@@ -47,7 +47,7 @@ export async function createSubscription(
 
     // Create return URL - EXACTLY like Pricefy
     // Point to billing-return route which will handle subscription update, then redirect to /app
-    const appUrl = process.env.SHOPIFY_APP_URL || `https://${shop}/admin/apps/${process.env.SHOPIFY_APP_HANDLE || "amazon-importer"}`;
+    const appUrl = process.env.SHOPIFY_APP_URL || `https://${shop}/admin/apps/${process.env.SHOPIFY_APP_HANDLE || "amazon-importer-32"}`;
     const returnUrl = `${appUrl}/billing-return?shop=${shop}&plan=${planName}`;
 
     console.log(`🔄 Creating subscription for ${shop}:`, {
@@ -89,7 +89,7 @@ export async function createSubscription(
             {
               plan: {
                 appRecurringPricingDetails: {
-                  price: { amount: plan.price, currencyCode: "EUR" },
+                  price: { amount: plan.price, currencyCode: "USD" },
                   interval: plan.interval,
                 },
               },
@@ -148,13 +148,14 @@ export async function createSubscription(
     }
 
     // Save subscription ID for future reference with pending status
+    // NOTE: We do NOT update currentPlan here - only after payment is confirmed in billing-return
     if (subscriptionData?.id) {
       await prisma.appSettings.update({
         where: { shop },
         data: {
           subscriptionId: subscriptionData.id,
-          currentPlan: planName,
           subscriptionStatus: "PENDING", // Pending until confirmed
+          // Don't update currentPlan yet - only after user confirms payment
         },
       });
     }

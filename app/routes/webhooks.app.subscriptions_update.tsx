@@ -52,7 +52,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
 
       const amount = parseFloat(lineItems[0]?.pricing_details?.price?.amount || "0");
-      console.log(`💵 Subscription amount: €${amount}`);
+      console.log(`💵 Subscription amount: $${amount}`);
 
       // Map amount to plan
       let detectedPlan: PlanName = "FREE";

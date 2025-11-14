@@ -130,6 +130,48 @@ export default function Settings() {
           </s-stack>
         </s-banner>
 
+        {/* Setup Instructions Banner */}
+        <div
+          style={{
+            padding: "20px",
+            background: "linear-gradient(135deg, #008060 0%, #00b386 100%)",
+            borderRadius: "12px",
+            color: "white",
+            boxShadow: "0 4px 6px -1px rgba(0, 128, 96, 0.2)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+            <div style={{ fontSize: "32px" }}>💡</div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: "0 0 8px 0", fontSize: "18px", fontWeight: "600" }}>
+                Install the Amazon Buy Button in your theme
+              </h3>
+              <p style={{ margin: "0 0 12px 0", fontSize: "14px", opacity: 0.95, lineHeight: "1.5" }}>
+                To display the "Buy on Amazon" button on AFFILIATE products, you need to add the app block to your theme.
+                This is a one-time setup with step-by-step instructions and a direct link to your theme editor.
+              </p>
+              <a
+                href="/app/setup"
+                style={{
+                  display: "inline-block",
+                  padding: "10px 20px",
+                  backgroundColor: "white",
+                  color: "#008060",
+                  textDecoration: "none",
+                  borderRadius: "6px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  transition: "transform 0.2s ease",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
+                onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+              >
+                📚 View Setup Instructions
+              </a>
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <s-stack direction="block" gap="base">
             {/* 1. Affiliate Settings */}
