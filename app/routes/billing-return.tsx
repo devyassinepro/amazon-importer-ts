@@ -109,12 +109,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 // Component that handles client-side redirect with App Bridge
 export default function BillingReturn() {
+  // Get API key from environment - this runs on the server
   const apiKey = process.env.SHOPIFY_API_KEY || "";
 
   return (
     <html>
       <head>
-        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+        <meta charSet="utf-8" />
+        <title>Payment Confirmed - Redirecting...</title>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -128,38 +130,24 @@ export default function BillingReturn() {
 
                 console.log('🔄 Billing return - params:', { host, plan, chargeId, shop });
 
-                // Build redirect path (without host param to avoid double encoding)
-                let redirectPath = '/app?billing_completed=1';
-                if (plan) redirectPath += '&plan=' + plan;
-                if (chargeId) redirectPath += '&charge_id=' + chargeId;
+                // Build full redirect URL with all params preserved
+                const appUrl = 'https://amazonimporter-app-zffzk.ondigitalocean.app/app';
+                let redirectUrl = appUrl + '?billing_completed=1';
+                if (host) redirectUrl += '&host=' + encodeURIComponent(host);
+                if (plan) redirectUrl += '&plan=' + plan;
+                if (chargeId) redirectUrl += '&charge_id=' + chargeId;
+                if (shop) redirectUrl += '&shop=' + encodeURIComponent(shop);
 
-                console.log('🔗 Redirecting to:', redirectPath);
+                console.log('🔗 Redirecting to:', redirectUrl);
 
-                // Try App Bridge redirect first (for embedded app)
-                if (host && window.shopify && window.shopify.environment) {
-                  try {
-                    console.log('✅ Using App Bridge redirect');
-                    const app = window.shopify.AppBridge.createApp({
-                      apiKey: '${apiKey}',
-                      host: host,
-                    });
-                    const redirect = window.shopify.AppBridge.actions.Redirect.create(app);
-                    redirect.dispatch(window.shopify.AppBridge.actions.Redirect.Action.APP, redirectPath);
-                    return;
-                  } catch (error) {
-                    console.warn('⚠️ App Bridge redirect failed:', error);
+                // Simple top-level redirect (works best for Shopify embedded apps after billing)
+                setTimeout(function() {
+                  if (window.top) {
+                    window.top.location.href = redirectUrl;
+                  } else {
+                    window.location.href = redirectUrl;
                   }
-                }
-
-                // Fallback to top-level redirect with host param
-                const fullUrl = host ? redirectPath + '&host=' + host : redirectPath;
-                console.log('🔄 Fallback redirect to:', fullUrl);
-
-                if (window.top) {
-                  window.top.location.href = fullUrl;
-                } else {
-                  window.location.href = fullUrl;
-                }
+                }, 1000);
               })();
             `,
           }}
