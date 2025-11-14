@@ -109,6 +109,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const detectedPlan = BILLING_PLANS[autoSyncResult.syncedPlan as keyof typeof BILLING_PLANS]?.displayName || autoSyncResult.syncedPlan;
         billingMessage = `🎉 Payment successful! You're now on the ${detectedPlan} plan. Your new limits are active immediately.`;
         console.log(`✅ Auto-sync successful after billing: ${autoSyncResult.message}`);
+
+        // IMPORTANT: Reload settings after successful sync to show updated plan
+        settings = await prisma.appSettings.findUnique({
+          where: { shop: session.shop },
+        });
       } else {
         // If auto-sync fails, try to update manually based on the plan parameter
         console.log(`⚠️ Auto-sync failed, attempting manual update based on plan parameter: ${planUpgraded}`);
@@ -130,6 +135,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
           billingMessage = `🎉 Payment successful! You're now on the ${plan.displayName} plan. Your new limits are active.`;
           console.log(`✅ Manual plan update successful: ${plan.displayName}`);
+
+          // IMPORTANT: Reload settings after manual update to show updated plan
+          settings = await prisma.appSettings.findUnique({
+            where: { shop: session.shop },
+          });
         } else {
           billingMessage = `✅ Payment processed! Please refresh the page to see your new plan.`;
         }
@@ -155,6 +165,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const detectedPlan = BILLING_PLANS[autoSyncResult.syncedPlan as keyof typeof BILLING_PLANS]?.displayName || autoSyncResult.syncedPlan;
         billingMessage = `🎉 Plan synchronized! You're now on the ${detectedPlan} plan.`;
         console.log(`✅ Manual sync successful: ${autoSyncResult.message}`);
+
+        // IMPORTANT: Reload settings after successful sync to show updated plan
+        settings = await prisma.appSettings.findUnique({
+          where: { shop: session.shop },
+        });
       } else {
         console.log(`ℹ️ Manual sync result: ${autoSyncResult?.message || autoSyncResult?.error}`);
       }
@@ -188,9 +203,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     if (syncResult.success) {
       console.log(`✅ Subscription synced to ${syncResult.syncedPlan}`);
+
+      // IMPORTANT: Reload settings after successful sync to show updated plan
+      settings = await prisma.appSettings.findUnique({
+        where: { shop: session.shop },
+      });
     } else {
       console.error(`❌ Sync failed: ${syncResult.error}`);
     }
+  }
+
+  // Final safety check: ensure settings is never null
+  if (!settings) {
+    settings = await prisma.appSettings.findUnique({
+      where: { shop: session.shop },
+    });
   }
 
   return { settings, collections, recentProducts, billingMessage, billingStatus };
