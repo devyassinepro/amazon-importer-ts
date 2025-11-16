@@ -429,6 +429,17 @@ export default function Index() {
     }
   }, [billingMessage, billingStatus]);
 
+  // Force DROPSHIPPING mode if plan is FREE and user tries to select AFFILIATE
+  useEffect(() => {
+    if (settings.currentPlan === "FREE" && importMode === "AFFILIATE") {
+      setImportMode("DROPSHIPPING");
+      shopify.toast.show("Affiliate Mode requires BASIC plan or higher. Switched to Dropshipping Mode.", {
+        duration: 5000,
+        isError: true,
+      });
+    }
+  }, [settings.currentPlan, importMode, shopify]);
+
   useEffect(() => {
     if (fetcher.data?.action === "termsAccepted") {
       setShowTermsBlocker(false);
@@ -714,6 +725,8 @@ export default function Index() {
                 onChange={setImportMode}
                 originalPrice={productData.originalPrice}
                 buttonText={settings.buttonText}
+                affiliateAllowed={settings.currentPlan !== "FREE"}
+                currentPlan={settings.currentPlan || "FREE"}
               />
 
               {importMode === "DROPSHIPPING" && (
