@@ -72,9 +72,34 @@ export async function createSubscription(
     });
 
     // Create Shopify subscription
-    const response = await admin.graphql(
-      `#graphql
-        mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $test: Boolean!, $lineItems: [AppSubscriptionLineItemInput!]!) {
+    // In production, we omit the test parameter entirely (or set to null) to charge real money
+    // In development, we set test: true to avoid real charges
+    const isProduction = process.env.NODE_ENV === "production";
+
+    const graphqlQuery = isProduction
+      ? `#graphql
+        mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $lineItems: [AppSubscriptionLineItemInput!]!) {
+          appSubscriptionCreate(
+            name: $name
+            returnUrl: $returnUrl
+            lineItems: $lineItems
+          ) {
+            appSubscription {
+              id
+              name
+              status
+              currentPeriodEnd
+            }
+            confirmationUrl
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `
+      : `#graphql
+        mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $test: Boolean, $lineItems: [AppSubscriptionLineItemInput!]!) {
           appSubscriptionCreate(
             name: $name
             returnUrl: $returnUrl
@@ -94,25 +119,29 @@ export async function createSubscription(
             }
           }
         }
-      `,
-      {
-        variables: {
-          name: `${plan.displayName} Plan`,
-          returnUrl,
-          test: process.env.NODE_ENV !== "production", // Test mode in development
-          lineItems: [
-            {
-              plan: {
-                appRecurringPricingDetails: {
-                  price: { amount: plan.price, currencyCode: "USD" },
-                  interval: plan.interval,
-                },
-              },
+      `;
+
+    const variables: any = {
+      name: `${plan.displayName} Plan`,
+      returnUrl,
+      lineItems: [
+        {
+          plan: {
+            appRecurringPricingDetails: {
+              price: { amount: plan.price, currencyCode: "USD" },
+              interval: plan.interval,
             },
-          ],
+          },
         },
-      }
-    );
+      ],
+    };
+
+    // Only add test parameter in development
+    if (!isProduction) {
+      variables.test = true;
+    }
+
+    const response = await admin.graphql(graphqlQuery, { variables });
 
     const data = await response.json();
 
